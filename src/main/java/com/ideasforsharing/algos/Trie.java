@@ -1,27 +1,81 @@
 package com.ideasforsharing.algos;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class Trie {
 
-	public static List<Trie.Node> constructTries(List<String> patterns) {
+	private static Node ROOT_NODE = new Node((char)65535, null);
+	
+	
+	public List<String> matchingStrings(String input) {
+		List<String> result = new ArrayList<String>();
+		
+		char[] charPattern = input.toCharArray();
+		Node node = ROOT_NODE;
+		int patternIndex = 0;
+		for (char character: charPattern)
+		{
+			Node tempNode = searchParentNode(node, character);
+			if (tempNode != null) {
+				node = tempNode;
+				++patternIndex;
+				continue;
+			}
+			else 
+				break;
+		}
+		
+		if (node == ROOT_NODE) // nothing found
+			return result;
+		else
+		{
+			String prefix = new String(Arrays.copyOfRange(charPattern, 0, patternIndex));
+			for (Node tempNode : node.nodes)
+				result.add(prefix + constructStringFromNode(tempNode));
+			return result;
+		}
+	}
+	
+	
+	private String constructStringFromNode(Node node) {
+		char character = node.character;
+		
+	}
+	
+	public static Node constructTries(List<String> patterns) {
 		if( (patterns == null) || (patterns.size() == 0))
 			throw new IllegalArgumentException("supply atleast one pattern");	
 
-		List<Node> rootNodes = new ArrayList<Node>();
+		
 	
 		for (String pattern : patterns) {
 			char[] charPattern = pattern.toCharArray();
 			if (charPattern.length == 0) //supplied empty string
 				continue;
-			NodeSearchResult result = searchLastMatchingParentNode(rootNodes, charPattern,0);
-			if (result.matchingIndex < result.charPattern.length -1)
-				constructTrie(result.parentNode, result.charPattern, ++result.matchingIndex);
-			else // pattern already existed in nodes
-				continue;
+			Node node = ROOT_NODE;
+			int patternIndex = 0;
+			for (char character: charPattern)
+			{
+				Node tempNode = searchParentNode(node, character);
+				if (tempNode != null) {
+					node = tempNode;
+					++patternIndex;
+					continue;
+				}
+				else 
+					break;
+			}
+			
+			// if node = ROOT_NODE, we need to construct a trie and add it to the rootNode.nodes
+			if (node == ROOT_NODE)
+				constructTrie(ROOT_NODE, charPattern, 0);
+			else if (node != ROOT_NODE) // we met a partial match
+				constructTrie(node, charPattern, patternIndex);
+
 		}
-		return rootNodes;
+		return ROOT_NODE;
 	}
 	
 	private static void constructTrie(Node parentNode, char[] pattern, int patternIndex ) {
@@ -41,36 +95,17 @@ public class Trie {
 	 * @param rootNodes
 	 * @return
 	 */
-	private static NodeSearchResult searchLastMatchingParentNode(List<Node> rootNodes, char[] charPattern, int startingIndex)
-	{
-		NodeSearchResult result;
-				
-		for (Node node : rootNodes) {
-			if (node.character == charPattern[startingIndex])
-				return searchLastMatchingParentNode(node.nodes, charPattern, ++startingIndex);
-		}
-			
-		//none of the existing Nodes matched or rootNodes was empty
-		Node newRootNode = new Node(charPattern[startingIndex], null);
-		rootNodes.add(newRootNode);
-		result = new NodeSearchResult(charPattern, startingIndex, newRootNode);		
-		return result;
-
- 
+	private static Node searchParentNode(Node startingNode, char character)
+	{			
+		for (Node node : startingNode.nodes) {
+			if (node.character == character)
+			{
+				return node;
+			}
+		}		
+		return null;
 	}
 
-	
-	private static class NodeSearchResult {
-		char[] charPattern;
-		int matchingIndex;
-		Node parentNode;
-	
-		NodeSearchResult(char[] charPattern, int matchingIndex, Node parentNode) {
-			this.matchingIndex = matchingIndex;
-			this.parentNode = parentNode;
-			this.charPattern = charPattern;
-		}
-	}
 	
 	public static class Node {
 		char character;
@@ -86,10 +121,17 @@ public class Trie {
 				nodes.add(nextNode);
 		}
 		
-		public void print() {
-			System.out.printf("Character %c, Number of Nodes: %d\n", character, nodes.size());
+		public void print(int spacing) {
+			if (spacing == 0)
+				System.out.printf("[%c - %d]\n", character, nodes.size());
+			else
+				for (int i=0;i<=spacing;i++)
+					if (i == spacing)
+						System.out.printf("[%c - %d]\n", character, nodes.size());
+					else
+						System.out.printf("%s","-");
 			for (Node node: nodes) 
-				node.print();
+				node.print(spacing+2);
 		}
 
 	}
