@@ -9,11 +9,10 @@ public class Trie {
 	private static Node ROOT_NODE = new Node((char)65535, null);
 	
 	
-	public List<String> matchingStrings(String input) {
+	public static List<String> matchingStrings(String input, Node node) {
 		List<String> result = new ArrayList<String>();
 		
 		char[] charPattern = input.toCharArray();
-		Node node = ROOT_NODE;
 		int patternIndex = 0;
 		for (char character: charPattern)
 		{
@@ -29,18 +28,28 @@ public class Trie {
 		
 		if (node == ROOT_NODE) // nothing found
 			return result;
-		else
+		else if (patternIndex == input.length())// either we found full match or partial match. Only in case of full match, we should find remainder of eligible strings
 		{
-			String prefix = new String(Arrays.copyOfRange(charPattern, 0, patternIndex));
-			for (Node tempNode : node.nodes)
-				result.add(prefix + constructStringFromNode(tempNode));
-			return result;
+			constructStringsFromNode (node, new StringBuffer(), result, new String(Arrays.copyOfRange(charPattern, 0, charPattern.length-1)));
 		}
+		return result;
 	}
 	
 	
-	private String constructStringFromNode(Node node) {
-		char character = node.character;
+	private static void constructStringsFromNode(Node node, StringBuffer buffer, List<String> strings, String input) {
+		buffer.append(node.character);
+		if (node.isLeaf() )
+			strings.add(input + buffer.toString());
+		else {
+			if (node.isWord)
+				strings.add(input + buffer.toString());
+			for (Node tempNode: node.nodes)
+			{
+
+				constructStringsFromNode(tempNode,  new StringBuffer(buffer), strings, input);
+			}
+		}
+
 		
 	}
 	
@@ -71,8 +80,10 @@ public class Trie {
 			// if node = ROOT_NODE, we need to construct a trie and add it to the rootNode.nodes
 			if (node == ROOT_NODE)
 				constructTrie(ROOT_NODE, charPattern, 0);
-			else if (node != ROOT_NODE) // we met a partial match
+			else if ( (node != ROOT_NODE) && (patternIndex < charPattern.length))// we met a partial match
 				constructTrie(node, charPattern, patternIndex);
+			else // we met a full match
+				node.makeWordNode();
 
 		}
 		return ROOT_NODE;
@@ -80,7 +91,10 @@ public class Trie {
 	
 	private static void constructTrie(Node parentNode, char[] pattern, int patternIndex ) {
 		if (patternIndex >= pattern.length)
+		{
+			parentNode.makeWordNode();
 			return;
+		}
 		Trie.Node node = new Trie.Node(pattern[patternIndex], null);
 		parentNode.nodes.add(node);
 		constructTrie(node, pattern, ++patternIndex);
@@ -110,6 +124,7 @@ public class Trie {
 	public static class Node {
 		char character;
 		List<Node> nodes;
+		boolean isWord = false;
 		
 		Node (char c, Node nextNode)
 		{
@@ -121,17 +136,29 @@ public class Trie {
 				nodes.add(nextNode);
 		}
 		
+		public void makeWordNode() {
+			isWord = true;
+		}
+		
+		public boolean isWord() {
+			return isWord;
+		}
+		
 		public void print(int spacing) {
 			if (spacing == 0)
-				System.out.printf("[%c - %d]\n", character, nodes.size());
+				System.out.printf("[%c - %d - %b]\n", character, nodes.size(), this.isWord);
 			else
 				for (int i=0;i<=spacing;i++)
 					if (i == spacing)
-						System.out.printf("[%c - %d]\n", character, nodes.size());
+						System.out.printf("[%c - %d - %b]\n", character, nodes.size(), this.isWord);
 					else
 						System.out.printf("%s","-");
 			for (Node node: nodes) 
 				node.print(spacing+2);
+		}
+		
+		public boolean isLeaf() {
+			return nodes.isEmpty();
 		}
 
 	}
